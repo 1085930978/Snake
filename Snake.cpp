@@ -1,191 +1,280 @@
-// snake
+#include<WINSOCK2.H>
+#include<STDIO.H>
+#include<iostream>
+#include<string>
 #include<windows.h>
-#include<time.h>
 #include<stdlib.h>
 #include<conio.h>
 #define N 21
 #include<iostream>
 using namespace std;
 
-void position(int x,int y)  //Î»ÖÃº¯Êı£¬°Ñ¹â±êÎ»ÖÃ½øĞĞÃé×¼¡£ (windows.h)
+#pragma comment(lib, "ws2_32.lib")
+
+
+SOCKET sclient;
+int a;
+int b;
+const char * sendData = "hello \n";
+
+int Setconnect()
+{
+	WORD sockVersion = MAKEWORD(2, 2);
+	WSADATA data;
+	if (WSAStartup(sockVersion, &data) != 0)
+	{
+		return 0;
+	}
+		sclient = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+		if (sclient == INVALID_SOCKET)
+		{
+			printf("invalid socket!");
+			return 0;
+		}
+
+		sockaddr_in serAddr;
+		serAddr.sin_family = AF_INET;
+		serAddr.sin_port = htons(8888);
+		serAddr.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
+		if (connect(sclient, (sockaddr *)&serAddr, sizeof(serAddr)) == SOCKET_ERROR)
+		{  //è¿æ¥å¤±è´¥ 
+			printf("connect error !");
+			closesocket(sclient);
+			return 0;
+		}
+
+	return 1;
+	
+}
+
+void position(int x, int y)  //ä½ç½®å‡½æ•°ï¼ŒæŠŠå…‰æ ‡ä½ç½®è¿›è¡Œç„å‡†ã€‚ (windows.h)
 {
 	COORD a;
-	a.X=2*x;
-	a.Y=y;
-	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE),a);
+	a.X = 2 * x;
+	a.Y = y;
+	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), a);
 }
-void window(int food[2])   //´°¿Ú³õÊ¼»¯¡£ 
+void window(char foodx[],char foody[], int food[])   //çª—å£åˆå§‹åŒ–ã€‚ 
 {
-	int i,j;
-	int wall[N+2][N+2]={{0}};
-	for(int i=1;i<=N;i++)    //Ç½±Ú£ºµÚÒ»ĞĞºÍ×îºóÒ»ĞĞ£¬µÚÒ»ÁĞºÍ×îºóÒ»ÁĞ¡£ (0ºÍN+1)
+	int i, j;
+	int wall[N + 2][N + 2] = { { 0 } };
+	for (int i = 1; i <= N; i++)    //å¢™å£ï¼šç¬¬ä¸€è¡Œå’Œæœ€åä¸€è¡Œï¼Œç¬¬ä¸€åˆ—å’Œæœ€åä¸€åˆ—ã€‚ (0å’ŒN+1)
 	{
-		for(int j=1;j<=N;j++)
+		for (int j = 1; j <= N; j++)
 		{
-			wall[i][j]=1;
+			wall[i][j] = 1;
 		}
 	}
-	
-	for(int i=0;i<N+2;i++)
+
+	for (int i = 0; i<N + 2; i++)
 	{
-		for(int j=0;j<N+2;j++)
+		for (int j = 0; j<N + 2; j++)
 		{
-			if(wall[i][j])
+			if (wall[i][j])
 			{
-				cout<<"  ";
+				cout << "  ";
 			}
-			else cout<<"¡õ" ;
+			else cout << "â–¡";
 		}
-		cout<<endl;   //ºÜÖØÒª 
+		cout << endl;   //å¾ˆé‡è¦ 
 	}
-	
-	position(N+3,1);
-	cout<<"°´ W S A D ÒÆ¶¯·½Ïò"<<endl;
-	position(N+3,2);
-	cout<<"°´q¼üÔİÍ£,·½Ïò¼ü¼ÌĞø"<<endl;
-	position(N+3,3);
-	cout<<"·ÖÊı:"<<endl;
+
+	position(N + 3, 1);
+	cout << "æŒ‰ W S A D ç§»åŠ¨æ–¹å‘" << endl;
+	position(N + 3, 2);
+	cout << "æŒ‰qé”®æš‚åœ,æ–¹å‘é”®ç»§ç»­" << endl;
+	position(N + 3, 3);
+	cout << "åˆ†æ•°:" << endl;
+
+
+	send(sclient, sendData, strlen(sendData), 0);
+
 
 	
-	food[0]=rand()%N+1; // rand() 0~ÎŞÇî +1->1µ½N 
-	food[1]=rand()%N+1; 
-	position(food[0],food[1]);
-	cout<<"¡ñ"<<endl; 
+	recv(sclient, foodx, 4, 0);
+	recv(sclient, foody, 4, 0);
+
+
+	memcpy(&a, foodx, 4);
+	memcpy(&b, foody, 4);
+
+	food[0] = a;
+	food[1] = b;
+	position(food[0], food[1]);
+	cout << "â—" << endl;
 }
 
-
-
-int main()
+int Game(char foodx[], char foody[])
 {
-	int i=0,j=0;
-	int **snake=NULL;
-	int score=0;
-	int food[2];
-	char direction='f'; //±£´æÏÖÔÚÉßµÄÇ°½ø·½Ïò 
+	int i = 0, j = 0;
+	int **snake = NULL;
+	int score = 0;
+	char direction = 'f'; //ä¿å­˜ç°åœ¨è›‡çš„å‰è¿›æ–¹å‘ 
 	int tail[2];
-	int len=3;
-	char q='o';
+	int len = 3;
+	char q = 'o';
 	int *xy;
-	srand((unsigned)time(NULL));   //time.h
-	window(food);
+	int food[2];
+	window(foodx,foody,food);
+	int tempx;
+	int tempy;
+	snake = (int**)realloc(snake, sizeof(int*)*len); //ä¿®æ”¹å·²åˆ†é…çš„å†…å­˜ã€‚ 
+	for (i = 0; i<len; i++)
+	{
+		snake[i] = (int*)malloc(sizeof(int) * 2);//åˆ†é…è¿ç»­å†…å­˜   (ä»å †å†…åˆ†é…å†…å­˜ï¼Œåˆ†é…çš„æ˜¯åŠ¨æ€å†…å­˜,æ–°çš„å†…å­˜ã€‚)
+	}
+	for (int i = 0; i<len; i++)
+	{
+		snake[i][0] = N / 2;
+		snake[i][1] = N / 2 + i;             //ç«–ç€æ”¾çš„åˆå§‹è›‡ã€‚ 
+		position(snake[i][0], snake[i][1]);
+		cout << "â˜…" << endl;
+	}
+	while (1)
+	{
+		tail[0] = snake[len - 1][0];
+		tail[1] = snake[len - 1][1];
+		position(tail[0], tail[1]);
+		cout << "  " << endl;
 
-	snake=(int**)realloc(snake,sizeof(int*)*len); //ĞŞ¸ÄÒÑ·ÖÅäµÄÄÚ´æ¡£ 
-	for(i=0;i<len;i++)
-	{
-	snake[i]=(int*)malloc(sizeof(int)*2);//·ÖÅäÁ¬ĞøÄÚ´æ   (´Ó¶ÑÄÚ·ÖÅäÄÚ´æ£¬·ÖÅäµÄÊÇ¶¯Ì¬ÄÚ´æ,ĞÂµÄÄÚ´æ¡£)
-	}
-	for(int i=0;i<len;i++)
-	{
-		snake[i][0]=N/2;
-		snake[i][1]=N/2+i;             //Êú×Å·ÅµÄ³õÊ¼Éß¡£ 
-		position(snake[i][0],snake[i][1]);
-		cout<<"¡ï"<<endl;
-	}
-	while(1)
-	{
-		tail[0]=snake[len-1][0];
-		tail[1]=snake[len-1][1];
-		position(tail[0],tail[1]);
-		cout<<"  "<<endl;
-		
-		for(int i=len-1;i>0;i--)
+		for (int i = len - 1; i>0; i--)
 		{
-			snake[i][0]=snake[i-1][0];
-			snake[i][1]=snake[i-1][1];
-			position(snake[i][0],snake[i][1]);
-			cout<<"¡ï"<<endl;
-			
+			snake[i][0] = snake[i - 1][0];
+			snake[i][1] = snake[i - 1][1];
+			position(snake[i][0], snake[i][1]);
+			cout << "â˜…" << endl;
+
 		}
-		if(kbhit())
+		if (kbhit())
 		{
-			position(0,N+2);
-			q=getche();  //conio.h
-			
+			position(0, N + 2);
+			q = getche();  //conio.h
+
 		}
-				
-		switch(q)
-				{
-					case 'w': if(direction!='s')direction='w';break;  
-					case 's': if(direction!='w')direction='s';break;
-					case 'd': if(direction!='a')direction='d';break;
-					case 'a': if(direction!='d')direction='a';break;
-					default:break;
-				}
-				
-	    switch(direction)
-				{
-					case 'w': if(direction!='s')snake[0][1]--;break;  //ÍùÉÏÊÇµİ¼õ×ø±ê¡£ 
-					case 's': if(direction!='w')snake[0][1]++;break;
-					case 'd': if(direction!='a')snake[0][0]++;break;
-					case 'a': if(direction!='d')snake[0][0]--;break;
-					default:break;
-				}
-				
-		position(snake[0][0],snake[0][1]);
-		cout<<"¡ï"<<endl;
-		Sleep(abs(200-0.5*score));
-	
-		
-		if(snake[0][0]==food[0]&&snake[0][1]==food[1])
+
+		switch (q)
+		{
+		case 'w': if (direction != 's')direction = 'w'; break;
+		case 's': if (direction != 'w')direction = 's'; break;
+		case 'd': if (direction != 'a')direction = 'd'; break;
+		case 'a': if (direction != 'd')direction = 'a'; break;
+		default:break;
+		}
+
+		switch (direction)
+		{
+		case 'w': if (direction != 's')snake[0][1]--; break;  //å¾€ä¸Šæ˜¯é€’å‡åæ ‡ã€‚ 
+		case 's': if (direction != 'w')snake[0][1]++; break;
+		case 'd': if (direction != 'a')snake[0][0]++; break;
+		case 'a': if (direction != 'd')snake[0][0]--; break;
+		default:break;
+		}
+
+		position(snake[0][0], snake[0][1]);
+		cout << "â˜…" << endl;
+		Sleep(100);
+
+
+		if (snake[0][0] == food[0] && snake[0][1] == food[1])
 		{
 			len++;
 			score++;
-			snake=(int**)realloc(snake,sizeof(int*)*len);
-			snake[len-1]=(int*)malloc(sizeof(int)*2);
-		
-			food[0]=rand()%N+1; // rand() 0~ÎŞÇî +1->1µ½N 
-			food[1]=rand()%N+1; 
-			position(food[0],food[1]);
-			cout<<"¡ñ"<<endl;
-		
-			position(N+5,3);
-			cout<<score<<endl;
+			snake = (int**)realloc(snake, sizeof(int*)*len);
+			snake[len - 1] = (int*)malloc(sizeof(int) * 2);
+			
+			send(sclient, sendData, strlen(sendData), 0);
+
+			recv(sclient, foodx, 4, 0);
+			recv(sclient, foody, 4, 0);
+
+			memcpy(&a, foodx, 4);
+			memcpy(&b, foody, 4);
+
+			food[0] = a;
+			food[1] = b;
+			position(food[0], food[1]);
+			cout << "â—" << endl;
+
+			position(N + 5, 3);
+			cout << score << endl;
 		}
-		if(snake[0][0]==0||snake[0][0]==N||snake[0][1]==0||snake[0][1]==N)
+		if (snake[0][0] == 0 || snake[0][0] == N || snake[0][1] == 0 || snake[0][1] == N)
 		{
-			position(N/2,N/2);
-			cout<<"failure:¿Õ¸ñÖØĞÂ¿ªÊ¼"<<endl;
-			for(int i=0;i<len;i++)
-			free(snake[i]); //ÊÍ·ÅÄÚ´æ,½áÊøÓÎÏ· 			
-			q=getche();
-			if(q == ' ') 
+			position(N / 2, N / 2);
+			cout << "failure:ç©ºæ ¼é‡æ–°å¼€å§‹,qé”®é€€å‡ºã€‚" << endl;
+			for (int i = 0; i<len; i++)
+				free(snake[i]); //é‡Šæ”¾å†…å­˜,ç»“æŸæ¸¸æˆ 		
+			while (1)
 			{
-				system("Cls");
-				main();
-			}
-			else 
-			{			 
-			  exit(0);
-		    }
-		}
-	if(direction!='f')
-		for(int i=1;i<len;i++)
-		{
-			xy=snake[i];
-			if(snake[0][0]==xy[0]&&snake[0][1]==xy[1])
-			{
-				position(N/2,N/2);
-				cout<<"failure:¿Õ¸ñÖØĞÂ¿ªÊ¼"<<endl;
-				for(int i=0;i<len;i++)
-				free(snake[i]); //ÊÍ·ÅÄÚ´æ,½áÊøÓÎÏ· 
-				Sleep(30);			
-				q=getche();
-				if(q == ' ') 
+
+				q = getche();
+				if (q == ' ')
 				{
-				system("Cls");
-				main();
+					system("Cls");
+					return 1;
 				}
-				else 
-				{			 
-			       exit(0);
-			    }
+				else if (q == 'q')
+				{
+					return 0;
+				}
+				else continue;
 			}
-			else continue;
+
 		}
-		
+
+		if (direction != 'f')
+			for (int i = 1; i<len; i++)
+			{
+				xy = snake[i];
+				if (snake[0][0] == xy[0] && snake[0][1] == xy[1])
+				{
+					position(N / 2, N / 2);
+					cout << "failure:ç©ºæ ¼é‡æ–°å¼€å§‹,qé”®é€€å‡ºã€‚" << endl;
+					for (int i = 0; i<len; i++)
+						free(snake[i]); //é‡Šæ”¾å†…å­˜,ç»“æŸæ¸¸æˆ 
+
+					while (1)
+					{
+						q = getche();
+						if (q == ' ')
+						{
+							system("Cls");
+							return 1;
+						}
+						else if (q == 'q')
+						{
+							return 0;
+						}
+						else continue;
+					}
+
+				}
+				else continue;
+			}
 	}
+}
+int main()
+{
+	if (Setconnect() == 0)
+	{
+		printf("connect error !");
+		closesocket(sclient);
+		return 0;
+	}
+	char foodx[4];
+	char foody[4];
+	while (1)
+	{
+		int temp=Game(foodx,foody);
+		if (temp == 0)
+		{
+			closesocket(sclient);
+			WSACleanup();
+			exit(0);
+		}
+		else continue;
+	}
+
 	return 0;
 }
-	
-	
-	
+

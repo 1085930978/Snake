@@ -6,8 +6,6 @@
 #include <sstream>
 using namespace std;
 
-
-#pragma comment(lib,"ws2_32.lib")  
 int main(int argc, char* argv[])
 {
 	//初始化WSA  
